@@ -1,0 +1,9 @@
+*
+!*/
+
+!/.gitignore
+!/README.md
+!/utils.py
+
+!/day*/*.py
+!/day*/input*.*
