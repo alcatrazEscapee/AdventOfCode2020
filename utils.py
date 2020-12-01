@@ -17,11 +17,11 @@ def get_input_lines(path: str = './input.txt') -> List[str]:
     return get_input(path).split('\n')
 
 
-def ints(text: str) -> Tuple[int]:
+def ints(text: str) -> Tuple[int, ...]:
     return tuple(map(int, findall('([\-+]?\d+)', text)))
 
 
-def floats(text: str) -> Tuple[float]:
+def floats(text: str) -> Tuple[float, ...]:
     return tuple(map(float, findall('([\-+]?\d*(?:\d|\d\.|\.\d)\d*)', text)))
 
 
