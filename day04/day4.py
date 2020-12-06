@@ -32,9 +32,9 @@ def main(text: str):
                     (passport['hgt'].endswith('in') and 59 <= int(passport['hgt'][:-2]) <= 76) or
                     (passport['hgt'].endswith('cm') and 150 <= int(passport['hgt'][:-2]) <= 193)
                 ),
-                'hcl': bool(re.match(HAIR_COLOR_REGEX, passport['hcl'])),
+                'hcl': bool(re.fullmatch(HAIR_COLOR_REGEX, passport['hcl'])),
                 'ecl': passport['ecl'] in EYE_COLORS,
-                'pid': bool(re.match(PID_REGEX, passport['pid']))
+                'pid': bool(re.fullmatch(PID_REGEX, passport['pid']))
             }
             if all(validations.values()):
                 part2 += 1
@@ -45,7 +45,7 @@ def main(text: str):
 
 REQUIRED_FIELDS = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid']
 HAIR_COLOR_REGEX = '#[0-9a-f]{6}'
-PID_REGEX = '^[0-9]{9}$'
+PID_REGEX = '[0-9]{9}'
 EYE_COLORS = {'amb', 'blu', 'brn', 'gry', 'grn', 'hzl', 'oth'}
 
 if __name__ == '__main__':

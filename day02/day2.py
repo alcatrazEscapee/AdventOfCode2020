@@ -2,15 +2,14 @@
 # Results: 140 / 81
 
 from utils import *
+import re
 
 
 def main(lines: List[str]):
     part1 = part2 = 0
-    for data in lines:
-        data = data.replace('-', ' ').split(' ')
-        x, y = int(data[0]), int(data[1])  # x-y
-        c = data[2][0]  # character to consider
-        pwd = data[3]  # password
+    for line in lines:
+        x, y, c, pwd = re.match('(\d+)-(\d+) (\w): (\w+)', line).groups()
+        x, y = int(x), int(y)
         if x <= pwd.count(c) <= y:  # Part 1: the number of appearances of 'c' must be in [x, y]
             part1 += 1
         if (pwd[x - 1] == c) ^ (pwd[y - 1] == c):  # Part 2: ONE of (xor) index x and y must be 'c' (1 indexed)

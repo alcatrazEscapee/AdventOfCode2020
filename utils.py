@@ -1,13 +1,13 @@
-from re import findall
-from typing import Iterable, Dict, Any, Tuple, List, TypeVar, Callable
+# AoC Utils
+
+import re
+import math
+import functools
+
 from collections import defaultdict
-from functools import reduce
-from math import gcd
-
-Number = TypeVar('Number', int, float)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 
-# Input Reading
 def get_input(path: str = './input.txt') -> str:
     with open(path) as f:
         return f.read()
@@ -18,11 +18,14 @@ def get_input_lines(path: str = './input.txt') -> List[str]:
 
 
 def ints(text: str) -> Tuple[int, ...]:
-    return tuple(map(int, findall('([\-+]?\d+)', text)))
+    return tuple(map(int, re.findall('([\-+]?\d+)', text)))
 
 
 def floats(text: str) -> Tuple[float, ...]:
-    return tuple(map(float, findall('([\-+]?\d*(?:\d|\d\.|\.\d)\d*)', text)))
+    return tuple(map(float, re.findall('([\-+]?\d*(?:\d|\d\.|\.\d)\d*)', text)))
+
+
+Number = TypeVar('Number', int, float)
 
 
 # Geometry
@@ -70,26 +73,6 @@ def pabs(x: Iterable[Number]) -> Tuple[Number, ...]:
     return tuple(abs(y) for y in x)
 
 
-def print_grid(grid_objects: Dict[Tuple[int, int], Any], values_map: Dict[Any, str] or None = None, padding: int = 0, reverse_y: bool = False, reverse_x: bool = False):
-    """ Prints a grid, represented as a map from points to values, to the console. Default is top right = positive x, y """
-    def pixel(p: Any) -> str:
-        if values_map is None:
-            return str(p)
-        else:
-            return values_map[p] if p in values_map else '?'
-
-    min_x, max_x = min_max([p[0] for p in grid_objects.keys()])
-    min_y, max_y = min_max([p[1] for p in grid_objects.keys()])
-    min_x -= padding
-    min_y -= padding
-    max_x += padding
-    max_y += padding
-    range_x = range(max_x, min_x - 1, -1) if reverse_x else range(min_x, max_x + 1)
-    range_y = range(min_y, max_y + 1) if reverse_y else range(max_y, min_y - 1, -1)
-
-    print('\n'.join(''.join(pixel(grid_objects[(x, y)]) for x in range_x) for y in range_y))
-
-
 def min_max(x: Iterable[Number]) -> Tuple[Number, Number]:
     return min(x), max(x)
 
@@ -100,16 +83,16 @@ def sign(a: Number) -> Number:
 
 def lcm(a: int, b: int) -> int:
     """ Return lowest common multiple. """
-    return a * b // gcd(a, b)
+    return a * b // math.gcd(a, b)
 
 
 def gcd_iter(sequence: Iterable[int]) -> int:
     """ Return greatest common divisor of a list """
-    return reduce(gcd, sequence)
+    return functools.reduce(math.gcd, sequence)
 
 
 def lcm_iter(sequence: Iterable[int]) -> int:
-    return reduce(lcm, sequence)
+    return functools.reduce(lcm, sequence)
 
 
 def mod_inv(x: Number, m: Number) -> int:
@@ -129,11 +112,97 @@ def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     return points
 
 
-def bin_search(low: int, high: int, target: int, data: Callable[[int], int]) -> int:
-    while low < high:
-        mid = (low + high + 1) // 2
-        if data(mid) <= target:
-            low = mid
+def make_grid(grid_text: str) -> Dict[Tuple[int, int], Optional[str]]:
+    """ Constructs a dictionary based grid from an ASCII / character representation
+    :param grid_text:
+    :return:
+    """
+    grid = defaultdict(lambda: None)
+    for y, line in enumerate(grid_text.split('\n')):
+        for x, c in enumerate(line):
+            grid[x, y] = c
+    return grid
+
+
+def print_grid(grid_objects: Dict[Tuple[int, int], Any], values_map: Optional[Dict[Any, str]] = None, padding: int = 0, reverse_y: bool = True, reverse_x: bool = False):
+    """ Prints a grid, represented as a map from points to values, to the console.
+    Default reverse_x = False, reverse_y = True uses quadrant IV sign convention (Right = +x, Down = +y)
+    With reverse_y = True, uses quadrant I sign convention (Right = +x, Up = +y)
+    """
+    def pixel(p: Any) -> str:
+        if values_map is None:
+            return str(p)
         else:
-            high = mid - 1
-    return low
+            return values_map[p] if p in values_map else '?'
+
+    min_x = min(p[0] for p in grid_objects.keys()) - padding
+    max_x = max(p[0] for p in grid_objects.keys()) + padding
+    min_y = min(p[1] for p in grid_objects.keys()) - padding
+    max_y = max(p[1] for p in grid_objects.keys()) + padding
+    range_x = range(max_x, min_x - 1, -1) if reverse_x else range(min_x, max_x + 1)
+    range_y = range(min_y, max_y + 1) if reverse_y else range(max_y, min_y - 1, -1)
+
+    print('\n'.join(''.join(pixel(grid_objects[(x, y)]) for x in range_x) for y in range_y))
+
+
+class Cycle:
+    """
+    Computes a cycle, identified by a state transition map f: X -> X
+    Allows for optimized operations using that cycle, such as computing the state at a far future location or slice, or computing the number of states between two points.
+    """
+
+    def __init__(self, start: Any, generator: Callable[[Any], Any]):
+        self.generator = generator
+        self.prefix = []
+        self.cycle = []
+
+        seen = set()
+        state = start
+        i = 0
+        while state not in seen:
+            seen.add(state)
+            self.prefix.append(state)
+            state = generator(state)
+            i += 1
+
+        index = self.prefix.index(state)
+        self.cycle = self.prefix[index:]
+        self.prefix = self.prefix[:index]
+
+        self.period = len(self.cycle)
+        self.prefix_len = len(self.prefix)
+
+    def values(self, min_inclusive: int, max_exclusive: int) -> List[Tuple[Any, int]]:
+        """ Get all the states and the number of each from the slice [min_inclusive, max_exclusive) """
+        values = defaultdict(int)
+        i = min_inclusive
+        while i < self.prefix_len and i < max_exclusive:  # iterate prefix values
+            values[self[i]] += 1
+            i += 1
+        while (i - self.prefix_len) % self.period != 0 and i < max_exclusive:  # iterate until we reach the start of a cycle
+            values[self[i]] += 1
+            i += 1
+        for item in self.cycle:
+            counts = 1 + (max_exclusive - 1 - i) // self.period
+            if counts > 0:
+                values[item] += counts
+            i += 1
+        return list(values.items())
+
+    def __getitem__(self, item):
+        """ Access an individual item of the cycle as if it was a list from [0, infinity). Supports bounded slicing. """
+        if isinstance(item, int):
+            if item < 0:
+                raise TypeError('Cannot index a cycle with a negative value: %d' % item)
+            if item < len(self.prefix):
+                return self.prefix[item]
+            else:
+                return self.cycle[(item - len(self.prefix)) % len(self.cycle)]
+        if isinstance(item, slice):
+            if item.stop is None:
+                raise TypeError('Slice of Cycle must be bounded')
+            return [self[i] for i in range(0 if item.start is None else item.start, item.stop, 1 if item.step is None else item.step)]
+
+    def __str__(self):
+        return 'Cycle{prefix=%s, cycle=%s}' % (str(self.prefix), str(self.cycle))
+

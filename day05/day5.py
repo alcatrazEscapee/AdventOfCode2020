@@ -6,7 +6,7 @@ from utils import *
 
 def main(lines: List[str]):
     seat_ids = [
-        sum({'F': 0, 'B': 1, 'L': 0, 'R': 1}[c] << (9 - i) for i, c in enumerate(line))
+        int(''.join({'F': '0', 'B': '1', 'L': '0', 'R': '1'}[c] for c in line), 2)
         for line in lines
     ]
 
