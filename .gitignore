@@ -3,6 +3,7 @@
 
 !/.gitignore
 !/README.md
+!/LICENSE.txt
 !/utils.py
 
 !/day*/*.py
