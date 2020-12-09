@@ -4,7 +4,9 @@
 !/.gitignore
 !/README.md
 !/LICENSE.txt
+
 !/utils.py
+!/run.py
 
 !/day*/*.py
 !/day*/input*.*

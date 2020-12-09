@@ -5,7 +5,8 @@ import math
 import functools
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
+from enum import IntEnum, auto
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -205,4 +206,53 @@ class Cycle:
 
     def __str__(self):
         return 'Cycle{prefix=%s, cycle=%s}' % (str(self.prefix), str(self.cycle))
+
+
+class Opcode(IntEnum):
+    nop = auto()
+    acc = auto()
+    jmp = auto()
+
+
+class Asm:
+    """ An abstraction for the yet-unnamed assembly code used in Day 8 """
+
+    @staticmethod
+    def parse(lines: List[str]) -> List[Tuple[Union[Opcode, int], ...]]:
+        code = []
+        for line in lines:
+            opcode, *args = line.split(' ')
+            code.append((Opcode[opcode], *map(int, args)))
+        return code
+
+    def __init__(self, code: List[Tuple[Union['Opcode', int], ...]]):
+        self.code: List[Tuple[Union['Opcode', int], ...]] = code
+        self.pointer: int = 0
+        self.accumulator: int = 0
+        self.running: bool = False
+
+    def run(self) -> 'Asm':
+        self.running = True
+        while self.running:
+            self.tick()
+        return self
+
+    def tick(self):
+        if self.valid():
+            opcode = self.code[self.pointer][0]
+            if opcode == Opcode.nop:  # nop
+                self.pointer += 1
+            elif opcode == Opcode.acc:  # acc [value] -> increment the accumulator by [value]
+                self.accumulator += self.code[self.pointer][1]
+                self.pointer += 1
+            elif opcode == Opcode.jmp:  # jmp [offset] -> unconditional branch by [offset]
+                self.pointer += self.code[self.pointer][1]
+        else:
+            self.running = False
+
+    def valid(self):
+        return 0 <= self.pointer < len(self.code)
+
+    def __str__(self):
+        return 'Asm{p=%d, code[p]=%s, acc=%d}' % (self.pointer, str(self.code[self.pointer]) if self.valid() else '???', self.accumulator)
 
