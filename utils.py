@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 def get_input(path: str = './input.txt') -> str:
     with open(path) as f:
-        return f.read()
+        return f.read().replace('\r', '')
 
 
 def get_input_lines(path: str = './input.txt') -> List[str]:
