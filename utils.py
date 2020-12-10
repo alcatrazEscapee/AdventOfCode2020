@@ -6,7 +6,7 @@ import functools
 
 from collections import defaultdict
 from enum import IntEnum, auto
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -72,6 +72,10 @@ def psign(x: Iterable[Number]) -> Tuple[Number, ...]:
 
 def pabs(x: Iterable[Number]) -> Tuple[Number, ...]:
     return tuple(abs(y) for y in x)
+
+
+def pdiffs(x: Sequence[Number]) -> Tuple[Number, ...]:
+    return tuple(x[i + 1] - x[i] for i in range(len(x) - 1))
 
 
 def min_max(x: Iterable[Number]) -> Tuple[Number, Number]:
