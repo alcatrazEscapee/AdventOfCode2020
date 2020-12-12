@@ -6,7 +6,7 @@ from utils import *
 
 def main(text: str):
     values = ints(text)
-    diffs = pdiffs([0, *sorted(values), max(values) + 3])
+    diffs = differences([0, *sorted(values), max(values) + 3])
     print('Part 1:', diffs.count(1) * diffs.count(3))
 
     length = 0

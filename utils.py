@@ -6,7 +6,7 @@ import functools
 
 from collections import defaultdict, deque
 from enum import IntEnum, auto
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -26,99 +26,72 @@ def floats(text: str) -> Tuple[float, ...]:
     return tuple(map(float, re.findall('([\-+]?\d*(?:\d|\d\.|\.\d)\d*)', text)))
 
 
-Number = TypeVar('Number', int, float)
+def sum_iter(x: Iterable[int], y: Iterable[int], s: int = 1) -> Tuple[int, ...]:
+    """ Returns the equation x + s * y for each element in the sequence x and y """
+    return tuple(a + s * b for a, b in zip(x, y))
 
 
-# Geometry
-def padd(x: Iterable[Number], y: Iterable[Number]) -> Tuple[Number, ...]:
-    return tuple(a + b for a, b in zip(x, y))
-
-
-def psub(x: Iterable[Number], y: Iterable[Number]) -> Tuple[Number, ...]:
-    return tuple(a - b for a, b in zip(x, y))
-
-
-def pmul(x: Iterable[Number], a: Number) -> Tuple[Number, ...]:
-    return tuple(a * y for y in x)
-
-
-def pdot(x: Iterable[Number], y: Iterable[Number]) -> Number:
+def dot_iter(x: Iterable[int], y: Iterable[int]) -> int:
+    """ Returns the dot product of an sequence """
     return sum(a * b for a, b in zip(x, y))
 
 
-def pnorm1(x: Iterable[Number], y: Iterable[Number] = None) -> Number:
-    if y is not None:
-        x = psub(x, y)
-    return sum(map(abs, x))
-
-
-def pnorm2sq(x: Iterable[Number], y: Iterable[Number] = None) -> Number:
-    if y is not None:
-        x = psub(x, y)
-    return sum(i * i for i in x)
-
-
-def protccw(x: Tuple[Number, Number]) -> Tuple[Number, Number]:
-    return -x[1], x[0]
-
-
-def protcw(x: Tuple[Number, Number]) -> Tuple[Number, Number]:
-    return x[1], -x[0]
-
-
-def psign(x: Iterable[Number]) -> Tuple[Number, ...]:
-    return tuple(sign(y) for y in x)
-
-
-def pabs(x: Iterable[Number]) -> Tuple[Number, ...]:
-    return tuple(abs(y) for y in x)
-
-
-def pdiffs(x: Sequence[Number]) -> Tuple[Number, ...]:
+def differences(x: Sequence[int]) -> Tuple[int, ...]:
+    """ Returns the sequence of differences of consecutive elements of x """
     return tuple(x[i + 1] - x[i] for i in range(len(x) - 1))
 
 
-def min_max(x: Iterable[Number]) -> Tuple[Number, Number]:
+def prod(iterable: Iterable[int]) -> int:
+    """ Calculates the product of an iterable. In Python 3.8 this can be replaced with a call to math.prod """
+    return functools.reduce(lambda x, y: x * y, iterable)
+
+
+def min_max(x: Iterable[int]) -> Tuple[int, int]:
+    """ Returns both the min and max of a sequence """
     return min(x), max(x)
 
 
-def sign(a: Number) -> Number:
+def sign(a: int) -> int:
+    """ Returns the sign of a """
     return 0 if a == 0 else (-1 if a < 0 else 1)
 
 
 def lcm(a: int, b: int) -> int:
-    """ Return lowest common multiple. """
+    """ Lowest common multiple. """
     return a * b // math.gcd(a, b)
 
 
 def gcd_iter(sequence: Iterable[int]) -> int:
-    """ Return greatest common divisor of a list """
+    """ Greatest common divisor of a sequence. """
     return functools.reduce(math.gcd, sequence)
 
 
 def lcm_iter(sequence: Iterable[int]) -> int:
+    """ Finds the lowest common multiple of a sequence. """
     return functools.reduce(lcm, sequence)
 
 
-def mod_inv(x: Number, m: Number) -> int:
-    return pow(x, -1, m)
+def mod_inv(a: int, m: int) -> int:
+    """ Finds x such that a*x ~= 1 mod m. Uses the extended euclidean algorithm. In python 3.8+ this can be pow(a, -1, m), but this is explicitly written here in order to be PyPy compliant. """
+    def gcd(a_: int, b_: int) -> Tuple[int, int, int]:
+        if a_ == 0:
+            return b_, 0, 1
+        g_, x_, y_ = gcd(b_ % a_, a_)
+        return g_, y_ - (b_ // a_) * x_, x_
 
-
-def prod(iterable: Iterable[Number]) -> Number:
-    return functools.reduce(lambda x, y: x * y, iterable)
+    g, x, y = gcd(a, m)
+    if g == 1:
+        return ((x % m) + m) % m
+    raise ValueError('Modular inverse for a=%d, m=%d does not exist' % (a, m))
 
 
 def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     """ Returns a list of tuples of the points in a ray cast from start to end, not including either """
-    deltas = psub(end, start)
+    deltas = sum_iter(end, start, -1)
     delta_gcd = gcd_iter(deltas)
-    points = []
     if delta_gcd > 1:
-        for d in range(1, delta_gcd):
-            p = padd(start, pmul(deltas, d / delta_gcd))
-            if all(int(x) == x for x in p):
-                points.append(tuple(int(x) for x in p))
-    return points
+        return [tuple(s + d * g // delta_gcd for s, d in zip(start, deltas)) for g in range(1, delta_gcd)]
+    return []
 
 
 class Grid:
