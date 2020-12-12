@@ -4,9 +4,9 @@ import re
 import math
 import functools
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from enum import IntEnum, auto
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, TypeVar, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -104,6 +104,10 @@ def mod_inv(x: Number, m: Number) -> int:
     return pow(x, -1, m)
 
 
+def prod(iterable: Iterable[Number]) -> Number:
+    return functools.reduce(lambda x, y: x * y, iterable)
+
+
 def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     """ Returns a list of tuples of the points in a ray cast from start to end, not including either """
     deltas = psub(end, start)
@@ -117,37 +121,87 @@ def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     return points
 
 
-def make_grid(grid_text: str) -> Dict[Tuple[int, int], Optional[str]]:
-    """ Constructs a dictionary based grid from an ASCII / character representation
-    :param grid_text:
-    :return:
-    """
-    grid = defaultdict(lambda: None)
-    for y, line in enumerate(grid_text.split('\n')):
-        for x, c in enumerate(line):
-            grid[x, y] = c
-    return grid
+class Grid:
 
+    @staticmethod
+    def from_text(text: str, default_value: Optional[str] = None):
+        return Grid([list(line.strip()) for line in text.strip().split('\n')], default_value)
 
-def print_grid(grid_objects: Dict[Tuple[int, int], Any], values_map: Optional[Dict[Any, str]] = None, padding: int = 0, reverse_y: bool = True, reverse_x: bool = False):
-    """ Prints a grid, represented as a map from points to values, to the console.
-    Default reverse_x = False, reverse_y = True uses quadrant IV sign convention (Right = +x, Down = +y)
-    With reverse_y = True, uses quadrant I sign convention (Right = +x, Up = +y)
-    """
-    def pixel(p: Any) -> str:
-        if values_map is None:
-            return str(p)
+    @staticmethod
+    def from_lines(lines: List[str], default_value: Optional[str] = None):
+        return Grid([list(line) for line in lines], default_value)
+
+    def __init__(self, grid: List[List[str]], default_value: Optional[str] = None):
+        self.grid = grid
+        self.height = len(grid)
+        self.width = len(grid[0])
+        self.default_value = default_value
+
+    def copy(self) -> 'Grid':
+        return Grid([row.copy() for row in self.grid], self.default_value)
+
+    def count(self, value: str) -> int:
+        return sum(row.count(value) for row in self.grid)
+
+    def locations(self) -> Iterator[Tuple[int, int]]:
+        for x in range(self.width):
+            for y in range(self.height):
+                yield x, y
+
+    def map_create(self, f: Callable[[int, int], str]) -> 'Grid':
+        return Grid([[f(x, y) for x in range(self.width)] for y in range(self.height)], self.default_value)
+
+    def __getitem__(self, item):
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
+            if 0 <= item[0] < self.width and 0 <= item[1] < self.height:
+                return self.grid[item[1]][item[0]]
+            elif self.default_value is not None:
+                return self.default_value
+            else:
+                raise ValueError('Provided location is out of bounds: %s not in [0, %d) x [0, %d)' % (str(item), self.width, self.height))
         else:
-            return values_map[p] if p in values_map else '?'
+            raise TypeError('Provided index is not an (x, y) tuple: %s' % str(item))
 
-    min_x = min(p[0] for p in grid_objects.keys()) - padding
-    max_x = max(p[0] for p in grid_objects.keys()) + padding
-    min_y = min(p[1] for p in grid_objects.keys()) - padding
-    max_y = max(p[1] for p in grid_objects.keys()) + padding
-    range_x = range(max_x, min_x - 1, -1) if reverse_x else range(min_x, max_x + 1)
-    range_y = range(min_y, max_y + 1) if reverse_y else range(max_y, min_y - 1, -1)
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple) and len(key) == 2 and isinstance(key[0], int) and isinstance(key[1], int):
+            if 0 <= key[0] < self.width and 0 <= key[1] < self.height:
+                self.grid[key[1]][key[0]] = value
+            elif self.default_value is not None:
+                return self.default_value
+            else:
+                raise ValueError('Provided index is out of bounds: %s not in [0, %d) x [0, %d)' % (str(key), self.width, self.height))
+        else:
+            raise TypeError('Provided index is not an (x, y) tuple: %s' % str(key))
 
-    print('\n'.join(''.join(pixel(grid_objects[(x, y)]) for x in range_x) for y in range_y))
+    def __contains__(self, item):
+        if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
+            return 0 <= item[0] < self.width and 0 <= item[1] < self.height
+        if isinstance(item, str):
+            return any(item in row for row in self.grid)
+        raise TypeError('Provided item is not a key (x, y) pair, or value (str): %s' % str(item))
+
+    def __eq__(self, other):
+        return other is not None and self.grid == other.grid
+
+    def __str__(self):
+        return '\n'.join(''.join(row) for row in self.grid)
+
+
+def grid_bfs(grid: Grid, passable: Set[str], start: Tuple[int, int]) -> Dict[Tuple[int, int], int]:
+    """ A template for a grid based BFS """
+    queue = deque()
+    queue.append((*start, 0))
+    found = {start}
+    distances = {start: 0}
+    while queue:
+        x0, y0, d0 = queue.popleft()
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            p1 = x0 + dx, y0 + dy
+            if p1 not in found and p1 in grid and grid[p1] in passable:
+                found.add(p1)
+                distances[p1] = d0 + 1
+                queue.append((*p1, d0 + 1))
+    return distances
 
 
 class Cycle:

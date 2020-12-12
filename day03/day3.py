@@ -2,7 +2,6 @@
 # Results: Sloooooooow
 
 from utils import *
-from math import prod
 
 
 def main(lines: List[str]):
