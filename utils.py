@@ -71,15 +71,31 @@ def lcm_iter(sequence: Iterable[int]) -> int:
     return functools.reduce(lcm, sequence)
 
 
+def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
+    """ Extended Euclidean Algorithm. For any a, b, returns values gcd(a, b), x, and y such that a*x + b*y = gcd(a, b) """
+    if a == 0:
+        return b, 0, 1
+    g, x, y = extended_gcd(b % a, a)
+    return g, y - (b // a) * x, x
+
+
+def crt(a1: int, m1: int, a2: int, m2: int) -> Tuple[int, int]:
+    """ Generalized Chinese Remainder Theorem (CRT).
+    Find x, where x = a1 mod m1, x = a2 mod m2, if such a solution exists.
+    It always exists when m1 and m2 are coprime, or if g = gcd(m1, m2), and a1 == a2 mod g
+    Returns an x, and the modulus (m1 * m2 for the coprime case)
+    """
+    g, x, y = extended_gcd(m1, m2)
+    if a1 % g == a2 % g:
+        ar, mr = (a2 * x * m1 + a1 * y * m2) // g, m1 * m2 // g
+    else:
+        raise ValueError('The system x = %d mod %d, x = %d mod %d has no solution' % (a1, m1, a2, m2))
+    return ar % mr, mr
+
+
 def mod_inv(a: int, m: int) -> int:
     """ Finds x such that a*x ~= 1 mod m. Uses the extended euclidean algorithm. In python 3.8+ this can be pow(a, -1, m), but this is explicitly written here in order to be PyPy compliant. """
-    def gcd(a_: int, b_: int) -> Tuple[int, int, int]:
-        if a_ == 0:
-            return b_, 0, 1
-        g_, x_, y_ = gcd(b_ % a_, a_)
-        return g_, y_ - (b_ // a_) * x_, x_
-
-    g, x, y = gcd(a, m)
+    g, x, y = extended_gcd(a, m)
     if g == 1:
         return ((x % m) + m) % m
     raise ValueError('Modular inverse for a=%d, m=%d does not exist' % (a, m))
