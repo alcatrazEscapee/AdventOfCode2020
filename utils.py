@@ -11,15 +11,16 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequ
 
 def get_input(path: str = './input.txt') -> str:
     with open(path) as f:
-        return f.read().replace('\r', '')
+        return f.read()
 
 
 def get_input_lines(path: str = './input.txt') -> List[str]:
     return get_input(path).split('\n')
 
 
-def ints(text: str) -> Tuple[int, ...]:
-    return tuple(map(int, re.findall('([\-+]?\d+)', text)))
+def ints(text: str, sign_prefixes: bool = True) -> Tuple[int, ...]:
+    regex = '([\-+]?\d+)' if sign_prefixes else '(\d+)'
+    return tuple(map(int, re.findall(regex, text)))
 
 
 def floats(text: str) -> Tuple[float, ...]:
