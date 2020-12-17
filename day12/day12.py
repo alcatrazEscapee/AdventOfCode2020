@@ -28,8 +28,8 @@ def main(lines: List[str]):
             direction *= rot
             waypoint *= rot
 
-    print('Part 1:', int(abs(ship1.real) + abs(ship1.imag)))
-    print('Part 2:', int(abs(ship2.real) + abs(ship2.imag)))
+    print('Part 1:', manhattan(ship1))
+    print('Part 2:', manhattan(ship2))
 
 
 if __name__ == '__main__':

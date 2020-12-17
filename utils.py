@@ -3,6 +3,7 @@
 import re
 import math
 import functools
+import itertools
 
 from collections import defaultdict, deque
 from enum import IntEnum, auto
@@ -42,14 +43,28 @@ def differences(x: Sequence[int]) -> Tuple[int, ...]:
     return tuple(x[i + 1] - x[i] for i in range(len(x) - 1))
 
 
+def manhattan(x: Union[Iterable[int], complex]) -> int:
+    """ Returns the magnitude of a sequence using the 1-norm (manhattan distance to the origin). Also works for complex numbers. """
+    if isinstance(x, complex):
+        x = map(int, (x.real, x.imag))
+    return sum(map(abs, x))
+
+
 def prod(iterable: Iterable[int]) -> int:
     """ Calculates the product of an iterable. In Python 3.8 this can be replaced with a call to math.prod """
     return functools.reduce(lambda x, y: x * y, iterable)
 
 
 def min_max(x: Iterable[int]) -> Tuple[int, int]:
-    """ Returns both the min and max of a sequence """
-    return min(x), max(x)
+    """ Returns both the min and max of a sequence.
+    This, rather than calling min(x), max(x), will work when a generator (or other single-use iterator) is passed in
+    """
+    try:
+        seq = iter(x)
+        start = next(seq)
+    except StopIteration:
+        raise ValueError('min_max() arg is an empty sequence')
+    return functools.reduce(lambda left, right: (min(left[0], right), max(left[1], right)), seq, (start, start))
 
 
 def sign(a: int) -> int:
@@ -109,6 +124,29 @@ def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     if delta_gcd > 1:
         return [tuple(s + d * g // delta_gcd for s, d in zip(start, deltas)) for g in range(1, delta_gcd)]
     return []
+
+
+def moore_neighbors(p: Tuple[int, ...], d: int = 1) -> Iterable[Tuple[int, ...]]:
+    """ Returns all points in a Moore neighborhood (points which coordinates differ by at most d, or x, y s.t. |x-y| <= d under the infinity norm """
+    zero = (0,) * len(p)
+    for dp in itertools.product(range(-d, d + 1), repeat=len(p)):
+        if dp != zero:
+            yield sum_iter(p, dp)
+
+
+def von_neumann_neighbors(p: Tuple[int, ...], d: int = 1) -> Iterable[Tuple[int, ...]]:
+    """ Returns all points in a Von Neumann neighborhood (points which are at most a distance of d away, using the 1 norm / manhattan distance) """
+    n = len(p)
+    if d == 1:  # Special case, just iterate through each unit vector
+        for i in range(n):
+            dp = tuple((1 if j == i else 0 for j in range(n)))
+            yield sum_iter(p, dp)
+            yield sum_iter(p, dp, -1)
+    else:  # Otherwise, compute the moore neighborhood and filter
+        zero = (0,) * len(p)
+        for dp in itertools.product(range(-d, d + 1), repeat=len(p)):
+            if dp != zero and manhattan(dp) <= d:
+                yield sum_iter(p, dp)
 
 
 class Grid:
