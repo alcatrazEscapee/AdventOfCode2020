@@ -2,7 +2,6 @@
 # Results: Slow
 
 from utils import *
-import re
 
 
 def main():
@@ -22,13 +21,12 @@ def main():
     print('Part 2:', evaluate_lines(lines, Part2))
 
 
-
 def evaluate_lines(lines: List[str], cls: Callable[[str], 'Parser']) -> int:
     return sum(map(lambda t: evaluate(t, cls), lines))
 
 
-def evaluate(text: str, cls: Callable[[str], 'Parser']) -> int:
-    parser = cls(text)
+def evaluate(text: str, cls: Callable[[str, bool], 'Parser'], debug: bool = False) -> int:
+    parser = cls(text, debug)
     stack = []
     for t in parser.tokens:
         if isinstance(t, int):
@@ -42,10 +40,17 @@ def evaluate(text: str, cls: Callable[[str], 'Parser']) -> int:
 
 class Parser:
 
-    def __init__(self, text: str):
+    """
+    Template for a recursive descent, deterministic LL(1) parser
+    Handles basic tokenization (single characters, removing spaces, and single digit integers), and maintaining a token stack
+    Also has basic debugging functionality (as debugging parsers is difficult enough)
+    """
+
+    def __init__(self, text: str, debug: bool = False):
         self.text = text.replace(' ', '')
         self.pointer = 0
         self.tokens = []
+        self.debug = debug
         self.parse()
 
     def parse(self):
@@ -57,60 +62,127 @@ class Parser:
     def accept(self):
         self.pointer += 1
 
-    def expect(self, c):
-        if self.get() != c:
-            raise RuntimeError('Yer code be bad arrr')
-        self.accept()
+    def debug_print(self, *args):
+        if self.debug:
+            print('[Debug] -> \'%s\'' % self.text[self.pointer:self.pointer + 4], *args, ':', self.tokens[-1:-5:-1])
 
 
 class Part1(Parser):
 
+    """ S/SL Specification
+
+    parse:
+        @parse1
+        {[
+            | '+':
+                @parse1
+                .'+'
+            | '*':
+                @parse1
+                .'*'
+            | *:
+                >
+        ]};
+
+    parse1:
+        [
+            | '(':
+                @parse
+                ')'
+            | integer:
+                .integer
+        ];
+
+    """
+
     def parse(self):
+        self.debug_print('parse')
         self.parse1()
         while True:
             c = self.get()
             if c is None:
                 break
             if c in '*+':
+                self.debug_print('operator', c)
                 self.accept()
                 self.parse1()
                 self.tokens.append(c)
             else:
                 break
+        self.debug_print('end')
 
     def parse1(self):
+        self.debug_print('parse1')
         c = self.get()
         if c == '(':
+            self.debug_print('expression')
             self.accept()
             self.parse()
-            self.expect(')')
+            self.accept()
         elif c in '123456789':
+            self.debug_print('int', c)
             self.tokens.append(int(c))
             self.accept()
 
 
 class Part2(Parser):
 
+    """ S/SL Specification
+
+    parse:
+        @parse1
+        {[
+            | '*':
+                @parse1
+                .'*'
+        ]};
+
+    parse1:
+        @parse2
+        {[
+            | '+':
+                @parse2
+                .'+'
+        ]};
+
+    parse2:
+        [
+            | '(':
+                @parse
+                ')'
+            | integer:
+                .integer
+        ];
+
+    """
+
     def parse(self):
+        self.debug_print('parse')
         self.parse1()
         while self.get() == '*':
+            self.debug_print('operator *')
             self.accept()
             self.parse1()
             self.tokens.append('*')
 
     def parse1(self):
+        self.debug_print('parse1')
         self.parse2()
         while self.get() == '+':
+            self.debug_print('operator +')
             self.accept()
             self.parse2()
             self.tokens.append('+')
 
     def parse2(self):
+        self.debug_print('parse2')
         if self.get() == '(':
+            self.debug_print('expression')
             self.accept()
             self.parse()
-            self.expect(')')
+            self.accept()
         else:
+            self.debug_print('int', self.get())
             self.tokens.append(int(self.get()))
             self.accept()
 
@@ -145,4 +217,3 @@ def main_badly():
 
 if __name__ == '__main__':
     main()
-    main_badly()
