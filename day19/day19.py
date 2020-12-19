@@ -4,162 +4,79 @@
 from utils import *
 
 
-def main(text: str):
-    part1(text)
-
-    # replacements
-    lines = text.split('\n')
-    replacements = {
-        '8: 42': '8: 42 | 42 8',
-        '11: 42 31': '11: 42 31 | 42 11 31'
-    }
-    lines = [replacements[line] if line in replacements else line for line in lines]
-    text = '\n'.join(lines)
-    part2(text)
-
-
-def part1(text: str):
-    rules_text, examples = text.split('\n\n')
-
-    rules = {}
+def main():
+    rules_text, examples_text = get_input().split('\n\n')
+    examples: List[str] = examples_text.split('\n')
+    rules: Dict[int, Union[Tuple[Tuple[int, ...]], str]] = {}
     for rule_text in rules_text.split('\n'):
         key, rule_spec = rule_text.split(': ')
-        key = int(key)
         if '\"' in rule_spec:
-            c = rule_spec[1]
-            # print('exact rule', key, c)
-            rules[key] = c
+            rules[int(key)] = rule_spec[1]
         else:
-            r = []
-            for option in rule_spec.split('|'):
-                matches = ints(option)
-                r.append(matches)
-            rules[key] = tuple(r)
-            # print('delegate rule', key, r)
+            rules[int(key)] = tuple(ints(option) for option in rule_spec.split('|'))
 
-    # print('rule zero', rules[0])
+    # Part 2 Rule Changes
+    # 8: 42         ->  8: 42 | 42 8
+    # 11: 42 31     ->  11: 42 31 | 42 11 31
+    # Notably, Rule 0 is 0: 8 11
+    # The condensed form would be 0: 42{m} 31{n} s.t. m > n
+    # We can approximate this by just iterating through "enough" values of n and using {1, n} style capture groups, but that's rather poor
+    # If we had full PCRE support, we could use the regex r'A+?(A(?1)?B)', which is actually non-regular, but that's also difficult to come up with
+    # So instead, I wrote a separate parser which is able to handle A{n}B{m}, m < n specifically with backtracking.
 
-    def match_rule(line, rule_idx, pos):
-        # print('testing', line, 'against', rules[rule_idx], 'at', pos)
-        rule = rules[rule_idx]
-        save_start = pos
-        if isinstance(rule, str):
-            if pos < len(line) and line[pos] == rule:
-                return True, pos + 1
-            else:
-                return False, pos
-        else:
-            for opt in rule:
-                save = pos
-                for next_idx in opt:
-                    # advance and try rule
-                    b, p = match_rule(line, next_idx, pos)
-                    # print('ret', b, p)
-                    if b:
-                        pos = p
-                    else:
-                        # failed, backtrack
-                        pos = save
-                        break
-                else:
-                    # matched the rule completely!
-                    if pos <= len(example):
-                        return True, pos
-            return False, save_start
+    rule0 = compute_regex(rules, 0)
+    rule42 = compute_regex(rules, 42)
+    rule31 = compute_regex(rules, 31)
 
-    c = 0
-    for example in examples.split('\n'):
-        b, p = match_rule(example, 0, 0)
-        # print('ret full', b, p)
-        if p == len(example) and b:
-            c += 1
-            # print('match', example)
-        # print(b, p)
-    print('Part 1', c)
+    part1 = part2 = 0
+    for ex in examples:
+        if re.fullmatch(rule0, ex):
+            part1 += 1
+        if parse_match(rule42, rule31, ex):
+            part2 += 1
+
+    print('Part 1:', part1)
+    print('Part 2:', part2)
 
 
-def part2(text: str):
-    rules_text, examples = text.split('\n\n')
+def compute_regex(rules: Dict[int, Union[Tuple[Tuple[int, ...]], str]], key: int) -> str:
+    rule = rules[key]
+    if isinstance(rule, str):  # single character rule
+        return rule
+    elif len(rule) == 1:  # single chained rule
+        return ''.join(compute_regex(rules, k) for k in rule[0])
+    else:  # multiple choice rule
+        return '(?:' + '|'.join(''.join(compute_regex(rules, k) for k in option) for option in rule) + ')'
 
-    rules = {}
-    char_rules = {}
-    for rule_text in rules_text.split('\n'):
-        key, rule_spec = rule_text.split(': ')
-        key = int(key)
-        if '\"' in rule_spec:
-            c = rule_spec[1]
-            # print('exact rule', key, c)
-            char_rules[key] = c
-        else:
-            r = []
-            for option in rule_spec.split('|'):
-                matches = ints(option)
-                r.append(matches)
-            rules[key] = tuple(r)
 
-    change = True
-    while change:
-        change = False
-        rules_new = {}
-        for k, r in rules.items():
-            # print('checking rule', k, 'which is', r)
-            r_new = []
-            g = True
-            for opt in r:
-                f = True
-                if not isinstance(opt, str):
-                    opt_new = []
-                    for c in opt:
-                        if isinstance(c, str):
-                            opt_new.append(c)
-                        elif c in char_rules:
-                            opt_new.append(char_rules[c])
-                        else:
-                            # print('oops', c, opt_new, g, f)
-                            opt_new.append(c)
-                            f = False
-                            g = False
-                    if f:
-                        opt_new = '(' + ''.join(opt_new) + ')'
-                    else:
-                        opt_new = tuple(opt_new)
-                else:
-                    opt_new = opt
-                r_new.append(opt_new)
-            # print('end rule', k, 'with', f, g, r_new)
-            if g:
-                r_new = '(' + '|'.join(r_new) + ')'
-                change = True
-                char_rules[k] = r_new
-                # print('Reduced rule', k, 'prev', r, 'to', r_new)
-            else:
-                r_new = tuple(r_new)
-                rules_new[k] = r_new
+def parse_match(rule_a: str, rule_b: str, string: str) -> bool:
+    """ This parses the non-regular grammar A{m} B{n} s.t. m > n, where A and B are regular expressions given by rule_a and rule_b respectively """
 
-        rules = rules_new
+    def parse_match_inner(rule: str, p: int) -> Tuple[bool, int]:
+        match = re.match(rule, string[p:])
+        if not match:
+            return False, p
+        return True, p + match.span()[1]
 
-    # print('RULES')
-    # for k, v in sorted(rules.items()):
-    #     print('rule', k)
-    #     for ls in v:
-    #         print(ls)
-
-    c = 0
-    r8 = rules[8][0] + '{%d,11}'
-    r11 = rules[11][1][2] + '{%d,%d}'
-    # r8 = A+
-    # r11 = AnBn
-    # r0 = A>nBn
-    for ex in examples.split('\n'):
-        #print('try', ex)
-        for i in range(1, 10):
-            if re.fullmatch((r8 % i) + (r11 % (i, i)), ex):
-                c += 1
-                #print('match', c, ex, 'with i', i)
+    # Must start by matching A
+    count = 0
+    matched, pos = parse_match_inner(rule_a, 0)
+    while matched and pos <= len(string):
+        # Try and match B{1, count}, backtracking to here if necessary
+        save = pos
+        for _ in range(count):
+            matched, pos = parse_match_inner(rule_b, pos)
+            if not matched:  # backtrack
+                pos = save
                 break
-    print('Part 2:', c)
+            elif pos == len(string):  # matched a number of B < A, and the full string has been consumed
+                return True
 
+        # Otherwise, match an A from last saved pos, and increment
+        count += 1
+        matched, pos = parse_match_inner(rule_a, pos)
+    return False
 
 
 if __name__ == '__main__':
-    main(get_input())
+    main()
