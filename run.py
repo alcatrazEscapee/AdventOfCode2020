@@ -28,7 +28,7 @@ def main():
         17: ('286', '960'),
         18: ('701339185745', '4208490449905')
     })
-    for i in range(17, 1 + 25):
+    for i in range(1, 1 + 25):
         result = run_day(i)
         if result:
             p1, p2, delta_cp, delta_pypy = result
