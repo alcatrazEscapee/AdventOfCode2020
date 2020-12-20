@@ -117,6 +117,22 @@ def mod_inv(a: int, m: int) -> int:
     raise ValueError('Modular inverse for a=%d, m=%d does not exist' % (a, m))
 
 
+def isqrt(x: int) -> int:
+    """ Returns the largest integer y such that y * y <= x """
+    if x < 0:
+        raise ValueError('square root not defined for negative numbers')
+    elif x == 0:
+        return 0
+    n = x
+    a, b = divmod(n.bit_length(), 2)
+    x = 2 ** (a + b)
+    while True:
+        y = (x + n // x) // 2
+        if y >= x:
+            return x
+        x = y
+
+
 def ray_int(start: Iterable[int], end: Iterable[int]) -> list:
     """ Returns a list of tuples of the points in a ray cast from start to end, not including either """
     deltas = sum_iter(end, start, -1)
@@ -167,6 +183,25 @@ class Grid:
 
     def copy(self) -> 'Grid':
         return Grid([row.copy() for row in self.grid], self.default_value)
+
+    def rotate_cw(self) -> 'Grid':
+        new = self.copy()
+        for x, y in self.locations():
+            new[x, y] = self[y, self.width - 1 - x]
+        return new
+
+    def mirror_y(self) -> 'Grid':
+        new = self.copy()
+        for x, y in self.locations():
+            new[x, y] = self[self.width - 1 - x, y]
+        return new
+
+    def permutations(self) -> Iterator['Grid']:
+        grid = self
+        for _ in range(4):
+            yield grid
+            yield grid.mirror_y()
+            grid = grid.rotate_cw()
 
     def count(self, value: str) -> int:
         return sum(row.count(value) for row in self.grid)

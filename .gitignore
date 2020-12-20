@@ -9,4 +9,4 @@
 !/run.py
 
 !/day*/*.py
-!/day*/input*.*
+!/day*/*.txt
