@@ -46,7 +46,7 @@ def differences(x: Sequence[int]) -> Tuple[int, ...]:
 def manhattan(x: Union[Iterable[int], complex]) -> int:
     """ Returns the magnitude of a sequence using the 1-norm (manhattan distance to the origin). Also works for complex numbers. """
     if isinstance(x, complex):
-        x = map(int, (x.real, x.imag))
+        return abs(int(x.real)) + abs(int(x.imag))
     return sum(map(abs, x))
 
 
@@ -230,6 +230,85 @@ def grid_bfs(grid: Grid, passable: Set[str], start: Tuple[int, int]) -> Dict[Tup
                 distances[p1] = d0 + 1
                 queue.append((*p1, d0 + 1))
     return distances
+
+
+class Production(IntEnum):
+    LITERAL = auto()
+    SEQUENCE = auto()
+    GROUP = auto()
+
+
+class TopDownParser:
+    """
+    This is a Non-Deterministic, Backtracking, Top Down Parser implementation, using the specification provided by an underlying grammar
+    The grammar must be specified as a series of rules, with integer IDs. These rules are identified as per the Production enum, and have one extra piece of data specific to the rule.
+
+    This parser WILL encounter issues with left recursion. e.g. the grammar
+    1: 1 2 | 2
+    2: 'a'
+    which collectively describes all strings consisting of 'a's only
+    will generate an infinite sequence of [2, 1, 1, 1, 1...]
+
+    LITERAL rules: A str indicating a required piece of text to parse
+    SEQUENCE rules: A Tuple[int] of rule IDs to be parsed in sequence
+    GROUP rules: A Tuple[Tuple[int]] of of rule IDs, where one of the tuples must match (and will be interpreted as a sequence rule)
+    """
+
+    def __init__(self, grammar: Dict[int, Tuple[Production, Any]], root: int = 0):
+        self.grammar = dict(grammar)
+        self.root = root
+
+    def parse(self, text: str, start_rule: int = 0) -> bool:
+        group_stack = []
+        rule_stack = [self.grammar[start_rule]]
+        pointer = 0
+        backtracking = False
+        while True:
+            if backtracking:
+                # Backtrack to the most recent group, and check other possible group values
+                if not group_stack:
+                    return False  # Nowhere to backtrack to, we must've ended the entire string
+                else:
+                    # Compute the top backtrack location on the stack
+                    group = group_stack.pop(-1)
+                    save_stack, save_rule, save_index, save_pointer = group
+                    if save_index < len(save_rule[1]):
+                        # This group can still be tried with a subsequent entry
+                        # Append the adjusted group back to the group stack, and restore the current location
+                        backtracking = False
+                        rule_stack = list(save_stack)
+                        rule_stack.append((Production.SEQUENCE, save_rule[1][save_index]))
+                        pointer = save_pointer
+                        group_stack.append((save_stack, save_rule, save_index + 1, save_pointer))
+            else:
+                # Not backtracking
+                if not rule_stack:
+                    # No remaining rules. If we've reached the end of the string, the string is valid. If not, start backtracking
+                    if pointer == len(text):
+                        return True
+                    else:
+                        backtracking = True
+                else:
+                    # Compute the top rule on the stack
+                    rule = rule_stack.pop(-1)
+                    key = rule[0]
+                    if key == Production.LITERAL:
+                        if text[pointer:].startswith(rule[1]):
+                            pointer += len(rule[1])
+                        else:
+                            backtracking = True
+                    elif key == Production.SEQUENCE:
+                        # Append the next rules to the stack in reverse order
+                        # Ex: stack = [A ... B, SEQ], and SEQ = [1, 2, 3] -> stack = [A ... B, 3, 2, 1]
+                        for r in rule[1][::-1]:
+                            rule_stack.append(self.grammar[r])
+                    elif key == Production.GROUP:
+                        # Save this position on the group stack, marking the remaining rule stack, this group rule, the chosen path, and the current pointer
+                        # Then, expand the first group choice onto the rule stack
+                        group_stack.append((tuple(rule_stack), rule, 1, pointer))  # 1 = the next index to try
+                        rule_stack.append((Production.SEQUENCE, rule[1][0]))
+                    else:
+                        raise TypeError('Unknown production: %s' % repr(rule))
 
 
 class Cycle:
