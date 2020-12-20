@@ -168,35 +168,48 @@ def von_neumann_neighbors(p: Tuple[int, ...], d: int = 1) -> Iterable[Tuple[int,
 class Grid:
 
     @staticmethod
-    def from_text(text: str, default_value: Optional[str] = None):
+    def from_text(text: str, default_value: Optional[str] = None) -> 'Grid':
         return Grid([list(line.strip()) for line in text.strip().split('\n')], default_value)
 
     @staticmethod
-    def from_lines(lines: List[str], default_value: Optional[str] = None):
+    def from_lines(lines: List[str], default_value: Optional[str] = None) -> 'Grid':
         return Grid([list(line) for line in lines], default_value)
+
+    @staticmethod
+    def from_function(width: int, height: int, f: Callable[[int, int], str], default_value: Optional[str] = None) -> 'Grid':
+        return Grid([[f(x, y) for x in range(width)] for y in range(height)], default_value)
 
     def __init__(self, grid: List[List[str]], default_value: Optional[str] = None):
         self.grid = grid
         self.height = len(grid)
         self.width = len(grid[0])
+        self.square = self.width == self.height
         self.default_value = default_value
+        assert isinstance(grid, list), 'Grid must be a List[List[str]], got %s' % type(grid)
+        assert all(isinstance(row, list) for row in grid), 'Grid must be a List[List[str]], got %s' % str(type(row) for row in grid)
 
     def copy(self) -> 'Grid':
+        """ Creates an identical copy of this grid """
         return Grid([row.copy() for row in self.grid], self.default_value)
 
     def rotate_cw(self) -> 'Grid':
-        new = self.copy()
-        for x, y in self.locations():
-            new[x, y] = self[y, self.width - 1 - x]
-        return new
+        """ Creates a copy of this grid, rotated clockwise """
+        return self.map_create(lambda x, y: self[y, self.width - 1 - x])
+
+    def rotate_ccw(self) -> 'Grid':
+        """ Creates a copy of this grid, rotated counter clockwise """
+        return self.map_create(lambda x, y: self[self.height - 1 - y, x])
 
     def mirror_y(self) -> 'Grid':
-        new = self.copy()
-        for x, y in self.locations():
-            new[x, y] = self[self.width - 1 - x, y]
-        return new
+        """ Creates a copy of this grid, mirrored over the y-axis """
+        return self.map_create(lambda x, y: self[self.width - 1 - x, y])
+
+    def mirror_x(self) -> 'Grid':
+        """ Creates a copy of this grid, mirrored over the x-axis """
+        return self.map_create(lambda x, y: self[x, self.height - 1 - y])
 
     def permutations(self) -> Iterator['Grid']:
+        """ Iterates through all permutations (rotations and mirrors) of this grid """
         grid = self
         for _ in range(4):
             yield grid
@@ -204,17 +217,20 @@ class Grid:
             grid = grid.rotate_cw()
 
     def count(self, value: str) -> int:
+        """ Counts the number of occurrences of value within the grid """
         return sum(row.count(value) for row in self.grid)
 
     def locations(self) -> Iterator[Tuple[int, int]]:
+        """ An iterator over all coordinate positions within the grid """
         for x in range(self.width):
             for y in range(self.height):
                 yield x, y
 
     def map_create(self, f: Callable[[int, int], str]) -> 'Grid':
-        return Grid([[f(x, y) for x in range(self.width)] for y in range(self.height)], self.default_value)
+        """ Creates a copy of this grid, with each location populated with the required function """
+        return Grid.from_function(self.width, self.height, f, self.default_value)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Tuple[int, int]) -> str:
         if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
             if 0 <= item[0] < self.width and 0 <= item[1] < self.height:
                 return self.grid[item[1]][item[0]]
@@ -225,7 +241,7 @@ class Grid:
         else:
             raise TypeError('Provided index is not an (x, y) tuple: %s' % str(item))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Tuple[int, int], value: str):
         if isinstance(key, tuple) and len(key) == 2 and isinstance(key[0], int) and isinstance(key[1], int):
             if 0 <= key[0] < self.width and 0 <= key[1] < self.height:
                 self.grid[key[1]][key[0]] = value
@@ -236,17 +252,17 @@ class Grid:
         else:
             raise TypeError('Provided index is not an (x, y) tuple: %s' % str(key))
 
-    def __contains__(self, item):
+    def __contains__(self, item: Union[Tuple[int, int], str]) -> bool:
         if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int) and isinstance(item[1], int):
             return 0 <= item[0] < self.width and 0 <= item[1] < self.height
         if isinstance(item, str):
             return any(item in row for row in self.grid)
         raise TypeError('Provided item is not a key (x, y) pair, or value (str): %s' % str(item))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Optional['Grid']) -> bool:
         return other is not None and self.grid == other.grid
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '\n'.join(''.join(row) for row in self.grid)
 
 
