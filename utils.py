@@ -7,7 +7,7 @@ import itertools
 
 from collections import defaultdict, deque
 from enum import IntEnum, auto
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -471,4 +471,34 @@ class Asm:
 
     def __str__(self):
         return 'Asm{p=%d, code[p]=%s, acc=%d}' % (self.pointer, str(self.code[self.pointer]) if self.valid() else '???', self.accumulator)
+
+
+def unique_perfect_matching(graph: Mapping[Any, Set[Any]]) -> Dict[Any, Any]:
+    """ Given a bipartite graph with a unique perfect match, finds such match.
+    The graph is a Dict[Key, Set[Value]], and the result is a Dict[Key, Value] s.t. for k, v in match, v in graph[k]"""
+    graph = dict((k, set(v)) for k, v in graph.items())
+    match = {}
+    while len(match) < len(graph):
+        for k, vs in graph.items():
+            if len(vs) == 1:
+                v = vs.pop()
+                match[k] = v
+                break
+        else:
+            raise ValueError('Unable to find a unique perfect matching!')
+        for k, vs in graph.items():
+            if v in vs:
+                vs.remove(v)
+    return match
+
+
+def invert_injective(d: Mapping[Any, Any]) -> Dict[Any, Any]:
+    """ Given an injective mapping d : X -> Y, returns the inverse mapping  d0: Y -> X """
+    d0 = {}
+    for k, v in d.items():
+        if v not in d0:
+            d0[v] = k
+        else:
+            raise ValueError('Dictionary is not injective: keys %s, %s -> %s' % (repr(k), repr(d0[v]), repr(v)))
+    return d0
 
