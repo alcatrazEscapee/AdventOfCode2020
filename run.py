@@ -29,7 +29,8 @@ def main():
         18: ('701339185745', '4208490449905'),
         19: ('213', '325'),
         20: ('28057939502729', '2489'),
-        21: ('2798', 'gbt,rpj,vdxb,dtb,bqmhk,vqzbq,zqjm,nhjrzzj')
+        21: ('2798', 'gbt,rpj,vdxb,dtb,bqmhk,vqzbq,zqjm,nhjrzzj'),
+        22: ('35005', '32751')
     })
 
     for i in range(1, 1 + 25):
