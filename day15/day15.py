@@ -31,7 +31,7 @@ def main(run_tests: bool = False):
 
 def solve(text: str, stop: int):
     values = ints(text)
-    spoken = defaultdict(int)
+    spoken = [-1] * stop
     turn = 0
     last = None
     for v in values:
@@ -41,7 +41,7 @@ def solve(text: str, stop: int):
         last = v
 
     while turn < stop:
-        if last not in spoken:
+        if spoken[last] == -1:
             spoken[last] = turn
             last = 0
         else:
