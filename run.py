@@ -30,10 +30,11 @@ def main():
         19: ('213', '325'),
         20: ('28057939502729', '2489'),
         21: ('2798', 'gbt,rpj,vdxb,dtb,bqmhk,vqzbq,zqjm,nhjrzzj'),
-        22: ('35005', '32751')
+        22: ('35005', '32751'),
+        23: ('27865934', '170836011000')
     })
 
-    for i in range(1, 1 + 25):
+    for i in range(23, 1 + 25):
         result = run_day(i)
         if result:
             p1, p2, delta_cp, delta_pypy = result
