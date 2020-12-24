@@ -16,7 +16,7 @@ def main():
     input_values = list(map(int, '872495136'))
 
     _, start, by_value = build_part1(input_values)
-    result = solve(start, by_value, 100, max(input_values)).right
+    result = solve(start, by_value, 100, max(input_values))
     values = []
     while result.value != 1:
         values.append(result.value)
@@ -28,7 +28,7 @@ def main():
     _, start, by_value = build_part2(input_values, 10, max_value)
     result = solve(start, by_value, 10_000_000, max_value)
 
-    print('Part 2:', result.right.value * result.right.right.value)
+    print('Part 2:', result.value * result.right.value)
 
 
 def build_part1(input_values: List[int]) -> Tuple[Link, Link, List[Link]]:
@@ -74,10 +74,9 @@ def solve(start: Link, links_by_value: List[Link], steps: int, max_value: int) -
 
         # Search for a label which matches the destination requirements
         label = curr.value - 1
-        removed = {first.value, second.value, third.value}
-        while label in removed or label < 1:
+        while label == first.value or label == second.value or label == third.value or label < 1:
             label -= 1
-            if label < 0:
+            if label <= 0:
                 label = max_value
         dest = links_by_value[label - 1]
 
@@ -87,7 +86,7 @@ def solve(start: Link, links_by_value: List[Link], steps: int, max_value: int) -
 
         curr = curr.right
 
-    return links_by_value[0]  # return the link at the value = 1 position
+    return links_by_value[0].right  # return the link immediately to the right of the value = 1 position
 
 
 if __name__ == '__main__':

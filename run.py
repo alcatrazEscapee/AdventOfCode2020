@@ -34,7 +34,7 @@ def main():
         23: ('27865934', '170836011000')
     })
 
-    for i in range(23, 1 + 25):
+    for i in range(1, 1 + 25):
         result = run_day(i)
         if result:
             p1, p2, delta_cp, delta_pypy = result
@@ -55,36 +55,28 @@ def run_day(day: int) -> Optional[Tuple[Optional[str], Optional[str], float, flo
     except:
         return None
     try:
-        part1 = part2 = None
-        now = time.time()
-        proc = subprocess.Popen('python day%d.py' % day, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        while proc.poll() is None:
-            output = proc.stdout.readline().decode('utf-8').replace('\r', '').replace('\n', '')
-            if output.startswith('Part 1: '):
-                part1 = output[8:]
-            elif output.startswith('Part 2: '):
-                part2 = output[8:]
-            elif output != '':
-                print('Day %2d |' % day, output)
-        ret1 = proc.wait()
-        then = time.time()
-        delta_cp = then - now
-
-        # Try again with pypy, just for timing
-        now = time.time()
-        proc = subprocess.Popen('pypy3 day%d.py' % day, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        while proc.poll() is None:
-            proc.stdout.readline()
-        ret2 = proc.wait()
-        then = time.time()
-        delta_pypy = then - now
-        if ret1 != 0 or ret2 != 0:
-            raise RuntimeError('Bad return codes! %d %d' % (ret1, ret2))
+        _, _, delta_cp = run_process('python day%d.py' % day)
+        part1, part2, delta_pypy = run_process('pypy3 day%d.py' % day)
         return part1, part2, delta_cp, delta_pypy
     except:
         return None
     finally:
         os.chdir('../')
+
+
+def run_process(cmd: str) -> Tuple[str, str, float]:
+    part1 = part2 = 'None'
+    now = time.time()
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    while proc.poll() is None:
+        output = proc.stdout.readline().decode('utf-8').replace('\r', '').replace('\n', '')
+        if output.startswith('Part 1: '):
+            part1 = output[8:]
+        elif output.startswith('Part 2: '):
+            part2 = output[8:]
+    proc.wait()
+    then = time.time()
+    return part1, part2, then - now
 
 
 def format_time(delta: float) -> str:
