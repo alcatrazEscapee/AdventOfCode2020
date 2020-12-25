@@ -2,7 +2,6 @@
 # Results: 102 / 65
 
 from utils import *
-import itertools
 
 
 def main(text):

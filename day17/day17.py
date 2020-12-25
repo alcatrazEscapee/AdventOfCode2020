@@ -2,7 +2,6 @@
 # Results: 60 / 37
 
 from utils import *
-from collections import Counter
 
 
 def main(lines: List[str]):

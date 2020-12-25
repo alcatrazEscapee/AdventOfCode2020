@@ -2,7 +2,6 @@
 # Results: 684 / 306
 
 from utils import *
-from collections import Counter
 
 # Axial Coordinates (q, r)
 # From: https://www.redblobgames.com/grids/hexagons/

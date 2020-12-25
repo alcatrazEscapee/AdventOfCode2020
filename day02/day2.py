@@ -2,7 +2,6 @@
 # Results: 140 / 81
 
 from utils import *
-import re
 
 
 def main(lines: List[str]):

@@ -32,7 +32,8 @@ def main():
         21: ('2798', 'gbt,rpj,vdxb,dtb,bqmhk,vqzbq,zqjm,nhjrzzj'),
         22: ('35005', '32751'),
         23: ('27865934', '170836011000'),
-        24: ('377', '4231')
+        24: ('377', '4231'),
+        25: ('12285001', None)
     })
 
     for i in range(1, 1 + 25):
@@ -40,10 +41,11 @@ def main():
         if result:
             p1, p2, delta_cp, delta_pypy = result
             result = 'Day %2d' % i
-            if p1:
-                result += ' | Part 1: ' + ['failed', 'passed'][p1 == expected[i][0]]
+            result += ' | Part 1: ' + ['failed', 'passed'][p1 == expected[i][0]]
             if p2:
                 result += ' | Part 2: ' + ['failed', 'passed'][p2 == expected[i][1]]
+            else:
+                result += ' | Part 2: n/a   '
             result += ' | Time (CPython): ' + format_time(delta_cp) + ' (PyPy): ' + format_time(delta_pypy)
         else:
             result = 'Day %2d | No solution' % i
@@ -56,7 +58,7 @@ def run_day(day: int) -> Optional[Tuple[Optional[str], Optional[str], float, flo
     except:
         return None
     try:
-        _, _, delta_cp = run_process('python day%d.py' % day)
+        _, _, delta_cp = 0, 0, 0#run_process('python day%d.py' % day)
         part1, part2, delta_pypy = run_process('pypy3 day%d.py' % day)
         return part1, part2, delta_cp, delta_pypy
     except:
@@ -66,7 +68,7 @@ def run_day(day: int) -> Optional[Tuple[Optional[str], Optional[str], float, flo
 
 
 def run_process(cmd: str) -> Tuple[str, str, float]:
-    part1 = part2 = 'None'
+    part1 = part2 = None
     now = time.time()
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while proc.poll() is None:

@@ -2,7 +2,6 @@
 # Results: 425 / 426
 
 from utils import *
-import re
 
 
 def main(text: str):

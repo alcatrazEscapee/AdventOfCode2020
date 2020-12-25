@@ -7,10 +7,10 @@ def main():
     modulo = 20201227
     subject = 7
     k = 1
-    for _ in range(modulo):
+    for n in range(1, modulo):
         k = (k * subject) % modulo
         if k == k1:
-            print('Part 1:', pow(k2, k, modulo))
+            print('Part 1:', pow(k2, n, modulo))
             break
 
 

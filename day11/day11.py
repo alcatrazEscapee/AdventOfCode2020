@@ -2,7 +2,6 @@
 # Results: 108 / 441
 
 from utils import *
-from typing import List
 
 
 def main():

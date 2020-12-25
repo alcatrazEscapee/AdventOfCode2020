@@ -5,9 +5,9 @@ import math
 import functools
 import itertools
 
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from enum import IntEnum, auto
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Callable, DefaultDict, Deque, Dict, FrozenSet, Iterable, Iterator, List, Mapping, MutableMapping, Optional, Sequence, Set, Tuple, TypeVar, Union
 
 
 def get_input(path: str = './input.txt') -> str:
@@ -266,23 +266,6 @@ class Grid:
         return '\n'.join(''.join(row) for row in self.grid)
 
 
-def grid_bfs(grid: Grid, passable: Set[str], start: Tuple[int, int]) -> Dict[Tuple[int, int], int]:
-    """ A template for a grid based BFS """
-    queue = deque()
-    queue.append((*start, 0))
-    found = {start}
-    distances = {start: 0}
-    while queue:
-        x0, y0, d0 = queue.popleft()
-        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-            p1 = x0 + dx, y0 + dy
-            if p1 not in found and p1 in grid and grid[p1] in passable:
-                found.add(p1)
-                distances[p1] = d0 + 1
-                queue.append((*p1, d0 + 1))
-    return distances
-
-
 class Production(IntEnum):
     LITERAL = auto()
     SEQUENCE = auto()
@@ -360,117 +343,6 @@ class TopDownParser:
                         rule_stack.append((Production.SEQUENCE, rule[1][0]))
                     else:
                         raise TypeError('Unknown production: %s' % repr(rule))
-
-
-class Cycle:
-    """
-    Computes a cycle, identified by a state transition map f: X -> X
-    Allows for optimized operations using that cycle, such as computing the state at a far future location or slice, or computing the number of states between two points.
-    """
-
-    def __init__(self, start: Any, generator: Callable[[Any], Any]):
-        self.generator = generator
-        self.prefix = []
-        self.cycle = []
-
-        seen = set()
-        state = start
-        i = 0
-        while state not in seen:
-            seen.add(state)
-            self.prefix.append(state)
-            state = generator(state)
-            i += 1
-
-        index = self.prefix.index(state)
-        self.cycle = self.prefix[index:]
-        self.prefix = self.prefix[:index]
-
-        self.period = len(self.cycle)
-        self.prefix_len = len(self.prefix)
-
-    def values(self, min_inclusive: int, max_exclusive: int) -> List[Tuple[Any, int]]:
-        """ Get all the states and the number of each from the slice [min_inclusive, max_exclusive) """
-        values = defaultdict(int)
-        i = min_inclusive
-        while i < self.prefix_len and i < max_exclusive:  # iterate prefix values
-            values[self[i]] += 1
-            i += 1
-        while (i - self.prefix_len) % self.period != 0 and i < max_exclusive:  # iterate until we reach the start of a cycle
-            values[self[i]] += 1
-            i += 1
-        for item in self.cycle:
-            counts = 1 + (max_exclusive - 1 - i) // self.period
-            if counts > 0:
-                values[item] += counts
-            i += 1
-        return list(values.items())
-
-    def __getitem__(self, item):
-        """ Access an individual item of the cycle as if it was a list from [0, infinity). Supports bounded slicing. """
-        if isinstance(item, int):
-            if item < 0:
-                raise TypeError('Cannot index a cycle with a negative value: %d' % item)
-            if item < len(self.prefix):
-                return self.prefix[item]
-            else:
-                return self.cycle[(item - len(self.prefix)) % len(self.cycle)]
-        if isinstance(item, slice):
-            if item.stop is None:
-                raise TypeError('Slice of Cycle must be bounded')
-            return [self[i] for i in range(0 if item.start is None else item.start, item.stop, 1 if item.step is None else item.step)]
-
-    def __str__(self):
-        return 'Cycle{prefix=%s, cycle=%s}' % (str(self.prefix), str(self.cycle))
-
-
-class Opcode(IntEnum):
-    nop = auto()
-    acc = auto()
-    jmp = auto()
-
-
-class Asm:
-    """ An abstraction for the yet-unnamed assembly code used in Day 8 """
-
-    @staticmethod
-    def parse(lines: List[str]) -> List[Tuple[Union[Opcode, int], ...]]:
-        code = []
-        for line in lines:
-            opcode, *args = line.split(' ')
-            code.append((Opcode[opcode], *map(int, args)))
-        return code
-
-    def __init__(self, code: List[Tuple[Union['Opcode', int], ...]]):
-        self.code: List[Tuple[Union['Opcode', int], ...]] = code
-        self.pointer: int = 0
-        self.accumulator: int = 0
-        self.running: bool = False
-
-    def run(self) -> 'Asm':
-        self.running = True
-        while self.running:
-            self.tick()
-        return self
-
-    def tick(self):
-        if self.valid():
-            opcode = self.code[self.pointer][0]
-            if opcode == Opcode.nop:  # nop
-                self.pointer += 1
-            elif opcode == Opcode.acc:  # acc [value] -> increment the accumulator by [value]
-                self.accumulator += self.code[self.pointer][1]
-                self.pointer += 1
-            elif opcode == Opcode.jmp:  # jmp [offset] -> unconditional branch by [offset]
-                self.pointer += self.code[self.pointer][1]
-        else:
-            self.running = False
-
-    def valid(self):
-        return 0 <= self.pointer < len(self.code)
-
-    def __str__(self):
-        return 'Asm{p=%d, code[p]=%s, acc=%d}' % (self.pointer, str(self.code[self.pointer]) if self.valid() else '???', self.accumulator)
 
 
 def unique_perfect_matching(graph: Mapping[Any, Set[Any]]) -> Dict[Any, Any]:

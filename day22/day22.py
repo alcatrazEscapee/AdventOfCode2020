@@ -2,8 +2,6 @@
 # Results: 113 / 380
 
 from utils import *
-from collections import deque
-from typing import Deque
 
 
 def main():

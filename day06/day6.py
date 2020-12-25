@@ -2,7 +2,6 @@
 # Results: 110 / 89
 
 from utils import *
-from collections import Counter
 
 
 def main(text: str):
